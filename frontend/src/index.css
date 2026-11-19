@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #0B0D10;
+  color: #E4E4E7;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0B0D10;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #292E36;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #20C978;
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #292E36 #0B0D10;
+}
+
+@layer components {
+  .card {
+    @apply bg-card border border-borderDark rounded-2xl p-5 shadow-sm transition-all duration-200;
+  }
+
+  .btn {
+    @apply px-4 py-2 rounded-xl font-medium text-sm transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2;
+  }
+
+  .btn-green {
+    @apply btn bg-[#20C978] hover:bg-[#1bb86d] text-black font-semibold shadow-sm;
+  }
+
+  .btn-red {
+    @apply btn bg-[#EF4444] hover:bg-[#dc2626] text-white font-semibold shadow-sm;
+  }
+
+  .btn-outline {
+    @apply btn bg-transparent border border-[#292E36] hover:bg-[#20252D] text-gray-200;
+  }
+
+  .input-field {
+    @apply w-full bg-[#12151A] border border-[#292E36] rounded-xl px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-[#20C978];
+  }
+
+  .pulse-dot {
+    @apply relative inline-flex h-2 w-2 rounded-full;
+  }
+
+  .pulse-dot::before {
+    content: '';
+    @apply absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping;
+    background: inherit;
+  }
+}

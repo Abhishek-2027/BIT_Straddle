@@ -1,0 +1,139 @@
+{
+  "project": "BTC ATM Short Straddle Trading System",
+  "generated_at": "2026-11-18T17:01:00Z",
+  "status": "configured_for_demo; credentials_not_live_verified",
+  "external_apis": {
+    "exchange": "Bybit V5 Demo Trading",
+    "rest_base_url": "https://api.bybit.com",
+    "websocket_public_url": "wss://stream.bybit.com/v5/public/option",
+    "endpoints_used": [
+      {
+        "name": "BTC Spot/Perp Ticker",
+        "method": "GET",
+        "url": "https://api.bybit.com/v5/market/tickers?category=linear&symbol=BTCUSDT",
+        "purpose": "Feeds live BTC price, 24h high/low, and 24h percentage change to BtcPriceCard"
+      },
+      {
+        "name": "BTC 15-Minute Kline",
+        "method": "GET",
+        "url": "https://api.bybit.com/v5/market/kline?category=linear&symbol=BTCUSDT&interval=15&limit=24",
+        "purpose": "Renders real-time 24-point sparkline price chart in the BTC Price card"
+      },
+      {
+        "name": "Option Instruments Info",
+        "method": "GET",
+        "url": "https://api.bybit.com/v5/market/instruments-info?category=option&baseCoin=BTC",
+        "purpose": "Discovers all active BTC option expirations, strikes, and contract specifications"
+      },
+      {
+        "name": "Option Top-of-Book Tickers",
+        "method": "GET",
+        "url": "https://api.bybit.com/v5/market/tickers?category=option&symbol={option_symbol}",
+        "purpose": "Fetches mark price, bids, and asks to seed option orderbooks"
+      },
+      {
+        "name": "Unified Account Wallet Balance",
+        "method": "GET",
+        "url": "https://api-demo.bybit.com/v5/account/wallet-balance?accountType=UNIFIED",
+        "authentication": "HMAC-SHA256 signature with API Key, timestamp, and recv_window",
+        "purpose": "Displays real wallet balance, used margin, and available USDT in AccountBalanceCard"
+      },
+      {
+        "name": "NautilusTrader Order Execution",
+        "method": "POST / DELETE",
+        "protocol": "Nautilus Bybit Execution Client",
+        "purpose": "Submits IOC limit orders to Bybit Demo Trading and handles order fills/cancels"
+      }
+    ]
+  },
+  "internal_apis": {
+    "backend_base_url": "http://127.0.0.1:8000",
+    "websocket_url": "ws://127.0.0.1:8000/ws",
+    "endpoints": [
+      {
+        "path": "/api/health",
+        "method": "GET",
+        "description": "System health and connectivity check"
+      },
+      {
+        "path": "/api/state",
+        "method": "GET",
+        "description": "Returns full snapshot: state, selected strike, live quotes, positions, and Level 2 risk metrics"
+      },
+      {
+        "path": "/api/events",
+        "method": "GET",
+        "description": "Returns chronological audit log events from the strategy engine"
+      },
+      {
+        "path": "/api/market/btc",
+        "method": "GET",
+        "description": "Returns live BTC price, 24h change, high, low, and 15m sparkline history"
+      },
+      {
+        "path": "/api/account/balance",
+        "method": "GET",
+        "description": "Returns authenticated Bybit Unified Trading Account wallet balance"
+      },
+      {
+        "path": "/api/arm",
+        "method": "POST",
+        "description": "Arms the strategy and executes ATM short straddle entry orders"
+      },
+      {
+        "path": "/api/disarm",
+        "method": "POST",
+        "description": "Disarms the strategy back to QUOTING state"
+      },
+      {
+        "path": "/api/flatten",
+        "method": "POST",
+        "description": "Emergency exit: buys back both option legs with reduce-only orders and transitions to CLOSED"
+      },
+      {
+        "path": "/api/config",
+        "method": "POST",
+        "description": "Dynamically updates strategy configuration (SL %, TP %, qty, max spread)"
+      },
+      {
+        "path": "/ws",
+        "method": "WEBSOCKET",
+        "description": "Bi-directional WebSocket streaming real-time snapshots and execution events to the frontend"
+      }
+    ]
+  },
+  "current_configuration": {
+    "credentials": {
+      "api_key": "REDACTED",
+      "api_secret": "REDACTED",
+      "environment": "DEMO",
+      "account_type": "UNIFIED",
+      "is_testnet": false
+    },
+    "strategy_parameters": {
+      "strategy_name": "BTC ATM Short Straddle",
+      "underlying": "BTC",
+      "quantity": 0.01,
+      "max_spread_pct": 0.015,
+      "stale_quote_secs": 5,
+      "exit_watchdog_secs": 10,
+      "auto_enter": false,
+      "entry_order_style": "ioc_limit",
+      "exit_order_style": "ioc_limit",
+      "leg_fail_policy": "unwind"
+    },
+    "level_2_risk_management": {
+      "rule": "Automated Risk Management according to assignment specifications",
+      "stop_loss_pct": 0.01,
+      "take_profit_pct": 0.02,
+      "valuation_quote_side": "ASK",
+      "stop_loss_description": "Close both positions when combined buyback cost increases by 1% from entry premium",
+      "take_profit_description": "Close both positions when combined buyback cost decreases by 2% from entry premium",
+      "closing_order_type": "reduce_only=True, time_in_force=IOC"
+    },
+    "network_ports": {
+      "backend_api_port": 8000,
+      "frontend_vite_port": 5173
+    }
+  }
+}
