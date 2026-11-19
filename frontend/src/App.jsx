@@ -137,6 +137,7 @@ export default function App() {
               <BtcPriceCard marketData={marketData} />
               <StraddleStrategyCard
                 state={state}
+                config={snapshot?.config}
                 onArm={handleArm}
                 onDisarm={handleDisarm}
                 onFlatten={handleFlatten}
@@ -154,12 +155,12 @@ export default function App() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
               {/* Main PnL Chart (approx 65% width) */}
               <div className="lg:col-span-8 flex flex-col">
-                <MainPnlChart risk={snapshot?.risk} state={state} />
+                <MainPnlChart risk={snapshot?.risk} state={state} config={snapshot?.config} />
               </div>
 
               {/* Right Column: Stacked Current PnL & Open Positions (approx 35% width) */}
               <div className="lg:col-span-4 flex flex-col gap-4 justify-between">
-                <CurrentPnlCard risk={snapshot?.risk} state={state} />
+                <CurrentPnlCard risk={snapshot?.risk} state={state} config={snapshot?.config} />
                 <OpenPositionsCard
                   positions={snapshot?.positions}
                   quotes={snapshot?.quotes}

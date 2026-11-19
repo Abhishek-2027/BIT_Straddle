@@ -3,6 +3,7 @@ import { Zap, RotateCw, Square, Play, ShieldAlert } from 'lucide-react';
 
 export default function StraddleStrategyCard({
   state,
+  config,
   onArm,
   onDisarm,
   onFlatten,
@@ -69,7 +70,7 @@ export default function StraddleStrategyCard({
       <div className="flex items-center justify-between text-xs text-gray-400 font-normal">
         <span>Short call + short put · limited premium, substantial loss risk</span>
         <span className="text-[10px] text-[#20C978] font-semibold bg-[#1E2C22] px-1.5 py-0.5 rounded border border-[#20C978]/30">
-          L2: TP 2% / SL 1%
+          L2: TP {config?.tp_pct != null ? `${Number((config.tp_pct * 100).toFixed(1))}%` : '2%'} / SL {config?.sl_pct != null ? `${Number((config.sl_pct * 100).toFixed(1))}%` : '1%'}
         </span>
       </div>
 

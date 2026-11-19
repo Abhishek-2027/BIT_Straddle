@@ -314,6 +314,28 @@ class StraddleStrategy(Strategy):
         self._event_seq: int = 0
         self._last_instrument_discovery_ts: float = 0.0
 
+        # Dynamic configuration overrides (mutable)
+        self._sl_pct: float = float(config.sl_pct)
+        self._tp_pct: float = float(config.tp_pct)
+        self._qty: float = float(config.qty)
+        self._max_spread_pct: float = float(config.max_spread_pct)
+
+    @property
+    def sl_pct(self) -> float:
+        return self._sl_pct
+
+    @property
+    def tp_pct(self) -> float:
+        return self._tp_pct
+
+    @property
+    def qty(self) -> float:
+        return self._qty
+
+    @property
+    def max_spread_pct(self) -> float:
+        return self._max_spread_pct
+
     @staticmethod
     def _accumulate_fill(
         fills: dict[str, dict],
@@ -894,7 +916,7 @@ class StraddleStrategy(Strategy):
         if self._is_selection_expired():
             return "Selected options have expired; awaiting new expiry selection"
 
-        quantity = Decimal(str(self.cfg.qty))
+        quantity = Decimal(str(self.qty))
         quotes = []
         for leg, instrument_id in (("CALL", self._call_id), ("PUT", self._put_id)):
             quote = self._quotes.get(str(instrument_id))
@@ -914,10 +936,10 @@ class StraddleStrategy(Strategy):
             [quote["bid"] for quote in quotes],
             [quote["ask"] for quote in quotes],
         )
-        if spread > self.cfg.max_spread_pct:
+        if spread > self.max_spread_pct:
             return (
                 f"Combined spread {spread:.2%} exceeds limit "
-                f"{self.cfg.max_spread_pct:.2%}"
+                f"{self.max_spread_pct:.2%}"
             )
         return None
 
@@ -982,7 +1004,7 @@ class StraddleStrategy(Strategy):
             return False
 
         current_ids = {str(self._call_id), str(self._put_id)}
-        quantity = Decimal(str(self.cfg.qty))
+        quantity = Decimal(str(self.qty))
         for index, candidate in enumerate(self._selection_candidates):
             if index == getattr(self, "_selection_candidate_index", 0):
                 continue
@@ -1022,7 +1044,7 @@ class StraddleStrategy(Strategy):
             if risk.spread_pct(
                 [quote["bid"] for quote in leg_quotes],
                 [quote["ask"] for quote in leg_quotes],
-            ) > self.cfg.max_spread_pct:
+            ) > self.max_spread_pct:
                 continue
 
             previous_strike = self._selection.strike if self._selection else "unknown"
@@ -1110,8 +1132,8 @@ class StraddleStrategy(Strategy):
             return
 
         asks = [cq["ask"], pq["ask"]]
-        call_qty = self._entry_fills.get("CALL", {}).get("qty", Decimal(str(self.cfg.qty)))
-        put_qty = self._entry_fills.get("PUT", {}).get("qty", Decimal(str(self.cfg.qty)))
+        call_qty = self._entry_fills.get("CALL", {}).get("qty", Decimal(str(self.qty)))
+        put_qty = self._entry_fills.get("PUT", {}).get("qty", Decimal(str(self.qty)))
         cost = risk.buyback_cost(
             [
                 (call_qty, asks[0], self._instrument_multiplier(self._call_id)),
@@ -1119,7 +1141,7 @@ class StraddleStrategy(Strategy):
             ],
             asks,
         )
-        decision = risk.decide(cost, self._entry_premium, self.cfg.sl_pct, self.cfg.tp_pct)
+        decision = risk.decide(cost, self._entry_premium, self.sl_pct, self.tp_pct)
         if decision is not None:
             self._request_exit(f"risk:{decision}")
 
@@ -1151,8 +1173,8 @@ class StraddleStrategy(Strategy):
             if quote.get("is_synthetic"):
                 self._emit_entry_wait(f"{leg} has only an indicative mark; waiting for a real order book")
                 return
-            if quote["bid_size"] < Decimal(str(self.cfg.qty)):
-                self._emit_entry_wait(f"{leg} bid size is below sell quantity {self.cfg.qty}")
+            if quote["bid_size"] < Decimal(str(self.qty)):
+                self._emit_entry_wait(f"{leg} bid size is below sell quantity {self.qty}")
                 return
 
         if cq["bid"] <= 0 or pq["bid"] <= 0:
@@ -1163,13 +1185,13 @@ class StraddleStrategy(Strategy):
         bids = [cq["bid"], pq["bid"]]
         asks = [cq["ask"], pq["ask"]]
         spread = risk.spread_pct(bids, asks)
-        if spread > self.cfg.max_spread_pct:
+        if spread > self.max_spread_pct:
             self._emit_entry_wait(
-                f"Combined spread {spread:.2%} exceeds limit {self.cfg.max_spread_pct:.2%}"
+                f"Combined spread {spread:.2%} exceeds limit {self.max_spread_pct:.2%}"
             )
             return
 
-        qty = Quantity.from_str(str(self.cfg.qty))
+        qty = Quantity.from_str(str(self.qty))
 
         self._entry_fills = {}
         self._entry_orders = {}
@@ -1181,7 +1203,7 @@ class StraddleStrategy(Strategy):
             coid = None
             if self.order_factory is not None:
                 inst = self.cache.instrument(inst_id) if getattr(self, "cache", None) is not None else None
-                order_qty = inst.make_qty(self.cfg.qty) if inst else qty
+                order_qty = inst.make_qty(self.qty) if inst else qty
                 self._entry_targets[leg_label] = Decimal(str(order_qty))
                 tick_sz = inst.price_increment.as_double() if inst and hasattr(inst, "price_increment") else 5.0
                 prec = inst.price_precision if inst and hasattr(inst, "price_precision") else None
@@ -1221,7 +1243,7 @@ class StraddleStrategy(Strategy):
             else:
                 from types import SimpleNamespace
                 coid = ClientOrderId(f"O-TEST-{leg_label}-{int(time.time()*1000)}")
-                self._entry_targets[leg_label] = Decimal(str(self.cfg.qty))
+                self._entry_targets[leg_label] = Decimal(str(self.qty))
                 mock_order = SimpleNamespace(
                     client_order_id=coid,
                     instrument_id=inst_id,
@@ -1283,7 +1305,7 @@ class StraddleStrategy(Strategy):
             if leg in self._entry_orders
             and leg not in self._entry_terminal_legs
             and self._entry_fills.get(leg, {}).get("qty", Decimal(0))
-            < self._entry_targets.get(leg, Decimal(str(self.cfg.qty)))
+            < self._entry_targets.get(leg, Decimal(str(self.qty)))
         ]
 
     def _cancel_pending_entry_orders(self) -> bool:
@@ -1394,7 +1416,7 @@ class StraddleStrategy(Strategy):
         )
         realized_pnl = entry_value - cost
         realized_pnl_pct = (realized_pnl / entry_value * Decimal(100)) if entry_value > 0 else Decimal(0)
-        sl_th, tp_th = risk.thresholds(entry_value, self.cfg.sl_pct, self.cfg.tp_pct)
+        sl_th, tp_th = risk.thresholds(entry_value, self.sl_pct, self.tp_pct)
         self._last_completed_trade = {
             "entry_premium": str(entry_value),
             "exit_cost": str(cost),
@@ -1622,7 +1644,7 @@ class StraddleStrategy(Strategy):
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             })
 
-            target_qty = self._entry_targets.get(leg, Decimal(str(self.cfg.qty)))
+            target_qty = self._entry_targets.get(leg, Decimal(str(self.qty)))
             if self._entry_fills[leg]["qty"] >= target_qty:
                 self._entry_terminal_legs.add(leg)
             order_target = self._order_target_qty.get(order_key, target_qty)
@@ -1661,7 +1683,7 @@ class StraddleStrategy(Strategy):
 
             if all(
                 self._entry_fills.get(entry_leg, {}).get("qty", Decimal(0))
-                >= self._entry_targets.get(entry_leg, Decimal(str(self.cfg.qty)))
+                >= self._entry_targets.get(entry_leg, Decimal(str(self.qty)))
                 for entry_leg in ("CALL", "PUT")
             ):
                 if self._state == StrategyState.EXITING:
@@ -1865,7 +1887,7 @@ class StraddleStrategy(Strategy):
         other_leg = "PUT" if failed_leg == "CALL" else "CALL"
         other_order = self._entry_orders.get(other_leg)
         other_fill = self._entry_fills.get(other_leg, {}).get("qty", Decimal(0))
-        other_target = self._entry_targets.get(other_leg, Decimal(str(self.cfg.qty)))
+        other_target = self._entry_targets.get(other_leg, Decimal(str(self.qty)))
 
         if other_order and other_fill < other_target and other_leg not in self._entry_terminal_legs:
             order = next(
@@ -1885,7 +1907,7 @@ class StraddleStrategy(Strategy):
         all_legs_terminal = all(
             leg in self._entry_terminal_legs
             or self._entry_fills.get(leg, {}).get("qty", Decimal(0))
-            >= self._entry_targets.get(leg, Decimal(str(self.cfg.qty)))
+            >= self._entry_targets.get(leg, Decimal(str(self.qty)))
             for leg in ("CALL", "PUT")
         )
         if not all_legs_terminal:
@@ -1972,7 +1994,7 @@ class StraddleStrategy(Strategy):
                 pending = [
                     leg for leg in ("CALL", "PUT")
                     if self._entry_fills.get(leg, {}).get("qty", Decimal(0))
-                    < self._entry_targets.get(leg, Decimal(str(self.cfg.qty)))
+                    < self._entry_targets.get(leg, Decimal(str(self.qty)))
                     and leg not in self._entry_terminal_legs
                 ]
                 if not pending:
@@ -2014,10 +2036,16 @@ class StraddleStrategy(Strategy):
             if self._state in (StrategyState.OPEN, StrategyState.ENTRY_SUBMITTED, StrategyState.EXITING):
                 self._emit_event("WARN", "Cannot update config while position is open")
             else:
-                for key in ("sl_pct", "tp_pct", "qty", "max_spread_pct"):
-                    if key in payload and payload[key] is not None:
-                        setattr(self.cfg, key, payload[key])
+                if "sl_pct" in payload and payload["sl_pct"] is not None:
+                    self._sl_pct = float(payload["sl_pct"])
+                if "tp_pct" in payload and payload["tp_pct"] is not None:
+                    self._tp_pct = float(payload["tp_pct"])
+                if "qty" in payload and payload["qty"] is not None:
+                    self._qty = float(payload["qty"])
+                if "max_spread_pct" in payload and payload["max_spread_pct"] is not None:
+                    self._max_spread_pct = float(payload["max_spread_pct"])
                 self._emit_event("CONFIG_UPDATED", str(payload))
+                self._publish_snapshot()
                 if self._state == StrategyState.ARMED:
                     self._attempt_entry()
 
@@ -2216,8 +2244,8 @@ class StraddleStrategy(Strategy):
             and pq["ask"] > 0
         ):
             asks = [cq["ask"], pq["ask"]]
-            call_qty = self._entry_fills.get("CALL", {}).get("qty", Decimal(str(self.cfg.qty)))
-            put_qty = self._entry_fills.get("PUT", {}).get("qty", Decimal(str(self.cfg.qty)))
+            call_qty = self._entry_fills.get("CALL", {}).get("qty", Decimal(str(self.qty)))
+            put_qty = self._entry_fills.get("PUT", {}).get("qty", Decimal(str(self.qty)))
             cost = risk.buyback_cost(
                 [
                     (call_qty, asks[0], self._instrument_multiplier(self._call_id)),
@@ -2225,7 +2253,7 @@ class StraddleStrategy(Strategy):
                 ],
                 asks,
             )
-            sl_th, tp_th = risk.thresholds(self._entry_premium, self.cfg.sl_pct, self.cfg.tp_pct)
+            sl_th, tp_th = risk.thresholds(self._entry_premium, self.sl_pct, self.tp_pct)
             bids = [cq["bid"], pq["bid"]]
             sp = risk.spread_pct(bids, asks)
             risk_info = {
@@ -2258,7 +2286,7 @@ class StraddleStrategy(Strategy):
         ):
             bids = [cq.get("bid", Decimal(0)), pq.get("bid", Decimal(0))]
             asks = [cq.get("ask", Decimal(0)), pq.get("ask", Decimal(0))]
-            qty = Decimal(str(self.cfg.qty))
+            qty = Decimal(str(self.qty))
             call_multiplier = self._instrument_multiplier(self._call_id)
             put_multiplier = self._instrument_multiplier(self._put_id)
             proj_entry = (
@@ -2269,7 +2297,7 @@ class StraddleStrategy(Strategy):
                 asks[0] * qty * call_multiplier
                 + asks[1] * qty * put_multiplier
             )
-            sl_th, tp_th = risk.thresholds(proj_entry, self.cfg.sl_pct, self.cfg.tp_pct)
+            sl_th, tp_th = risk.thresholds(proj_entry, self.sl_pct, self.tp_pct)
             if proj_entry > 0 and all(price > 0 for price in bids + asks):
                 sp = risk.spread_pct(bids, asks)
                 risk_info = {
@@ -2351,10 +2379,10 @@ class StraddleStrategy(Strategy):
             "entry_premium": str(self._entry_premium),
             "last_completed_trade": getattr(self, "_last_completed_trade", None),
             "config": {
-                "sl_pct": self.cfg.sl_pct,
-                "tp_pct": self.cfg.tp_pct,
-                "qty": self.cfg.qty,
-                "max_spread_pct": self.cfg.max_spread_pct,
+                "sl_pct": self.sl_pct,
+                "tp_pct": self.tp_pct,
+                "qty": self.qty,
+                "max_spread_pct": self.max_spread_pct,
                 "entry_order_style": self.cfg.entry_order_style,
                 "exit_order_style": self.cfg.exit_order_style,
                 "leg_fail_policy": self.cfg.leg_fail_policy,

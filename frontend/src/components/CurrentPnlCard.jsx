@@ -1,7 +1,7 @@
 import React from 'react';
 import { BarChart2, ShieldCheck } from 'lucide-react';
 
-export default function CurrentPnlCard({ risk, state = 'IDLE' }) {
+export default function CurrentPnlCard({ risk, state = 'IDLE', config }) {
   const isLive = risk?.state === 'OPEN' || risk?.is_live;
   const isClosed = risk?.state === 'CLOSED' || state === 'CLOSED';
   const entryPremium = risk?.entry_premium != null ? Number(risk.entry_premium) : null;
@@ -40,7 +40,7 @@ export default function CurrentPnlCard({ risk, state = 'IDLE' }) {
         </div>
         <div className="flex items-center gap-1 text-[10px] font-semibold text-[#20C978] bg-[#1E2C22] px-2 py-0.5 rounded-full border border-[#20C978]/30">
           <ShieldCheck className="w-3 h-3" />
-          <span>SL: 1% | TP: 2%</span>
+          <span>SL: {config?.sl_pct != null ? `${Number((config.sl_pct * 100).toFixed(1))}%` : '1%'} | TP: {config?.tp_pct != null ? `${Number((config.tp_pct * 100).toFixed(1))}%` : '2%'}</span>
         </div>
       </div>
 

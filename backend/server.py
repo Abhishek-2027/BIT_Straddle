@@ -321,6 +321,42 @@ async def reset_strategy() -> dict[str, Any]:
     return {"status": "ok", "command": "RESET"}
 
 
+def _persist_env_config(payload: dict[str, Any]) -> None:
+    """Persist updated risk/sizing knobs to backend/.env if it exists."""
+    env_paths = [
+        Path(__file__).resolve().parent / ".env",
+        Path(__file__).resolve().parent.parent / ".env",
+    ]
+    mapping = {
+        "sl_pct": "SL_PCT",
+        "tp_pct": "TP_PCT",
+        "qty": "QTY",
+        "max_spread_pct": "MAX_SPREAD_PCT",
+    }
+    for p in env_paths:
+        if p.exists():
+            try:
+                lines = p.read_text(encoding="utf-8").splitlines()
+                updated_lines = []
+                keys_seen = set()
+                for line in lines:
+                    matched = False
+                    for k, env_key in mapping.items():
+                        if line.startswith(f"{env_key}=") and k in payload:
+                            updated_lines.append(f"{env_key}={payload[k]}")
+                            keys_seen.add(env_key)
+                            matched = True
+                            break
+                    if not matched:
+                        updated_lines.append(line)
+                for k, env_key in mapping.items():
+                    if k in payload and env_key not in keys_seen:
+                        updated_lines.append(f"{env_key}={payload[k]}")
+                p.write_text("\n".join(updated_lines) + "\n", encoding="utf-8")
+            except Exception as e:
+                logger.warning("Could not persist config to %s: %s", p, e)
+
+
 @app.post("/api/config")
 async def update_config(update: ConfigUpdate) -> dict[str, Any]:
     """Update strategy risk and sizing configuration."""
@@ -340,6 +376,16 @@ async def update_config(update: ConfigUpdate) -> dict[str, Any]:
             )
 
     payload = update.model_dump(exclude_unset=True)
+    if update.sl_pct is not None:
+        settings.SL_PCT = float(update.sl_pct)
+    if update.tp_pct is not None:
+        settings.TP_PCT = float(update.tp_pct)
+    if update.qty is not None:
+        settings.QTY = float(update.qty)
+    if update.max_spread_pct is not None:
+        settings.MAX_SPREAD_PCT = float(update.max_spread_pct)
+
+    _persist_env_config(payload)
     bridge.push_command({"command": "UPDATE_CONFIG", "payload": payload})
     return {"status": "ok", "updated": payload}
 

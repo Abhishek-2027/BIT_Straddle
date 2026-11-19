@@ -11,10 +11,15 @@ import {
   ReferenceLine,
 } from 'recharts';
 
-export default function MainPnlChart({ risk, currentPnl = 0.0, state = 'IDLE' }) {
+export default function MainPnlChart({ risk, currentPnl = 0.0, state = 'IDLE', config }) {
   const [viewMode, setViewMode] = useState('percent'); // 'percent' | 'usdt'
   const [chartData, setChartData] = useState([]);
   const historyRef = useRef([]);
+
+  const tpPctNum = config?.tp_pct != null ? config.tp_pct * 100 : 2.0;
+  const slPctNum = config?.sl_pct != null ? config.sl_pct * 100 : 1.0;
+  const tpPctDisplay = `${Number(tpPctNum.toFixed(1))}%`;
+  const slPctDisplay = `${Number(slPctNum.toFixed(1))}%`;
 
   // Calculate Level 2 Risk Thresholds from backend risk snapshot
   const {
@@ -193,7 +198,7 @@ export default function MainPnlChart({ risk, currentPnl = 0.0, state = 'IDLE' })
         </div>
         <div className="flex flex-col">
           <span className="text-gray-400 text-[10px]">
-            {isClosed ? 'Realized PnL' : 'TP Target (+2%)'}
+            {isClosed ? 'Realized PnL' : `TP Target (+${tpPctDisplay})`}
           </span>
           {isClosed ? (
             <span
@@ -214,7 +219,7 @@ export default function MainPnlChart({ risk, currentPnl = 0.0, state = 'IDLE' })
         </div>
         <div className="flex flex-col">
           <span className="text-gray-400 text-[10px]">
-            {isClosed ? 'Status' : 'SL Limit (-1%)'}
+            {isClosed ? 'Status' : `SL Limit (-${slPctDisplay})`}
           </span>
           {isClosed ? (
             <span className="text-amber-400 font-mono font-bold">Ready to Re-Arm</span>
@@ -263,14 +268,14 @@ export default function MainPnlChart({ risk, currentPnl = 0.0, state = 'IDLE' })
             {/* Zero Breakeven Reference Line */}
             <ReferenceLine y={0} stroke="#6B7280" strokeDasharray="4 4" strokeWidth={1} />
 
-            {/* Level 2 Take-Profit (+2%) Threshold Line */}
+            {/* Level 2 Take-Profit Threshold Line */}
             {tpPnl !== null && <ReferenceLine
-              y={viewMode === 'percent' ? 2.0 : tpPnl}
+              y={viewMode === 'percent' ? tpPctNum : tpPnl}
               stroke="#20C978"
               strokeDasharray="5 3"
               strokeWidth={1.5}
               label={{
-                value: viewMode === 'percent' ? 'TP (+2.0%)' : `TP (+2%): +$${tpPnl.toFixed(2)}`,
+                value: viewMode === 'percent' ? `TP (+${tpPctDisplay})` : `TP (+${tpPctDisplay}): +$${tpPnl.toFixed(2)}`,
                 fill: '#20C978',
                 fontSize: 10,
                 position: 'right',
@@ -278,14 +283,14 @@ export default function MainPnlChart({ risk, currentPnl = 0.0, state = 'IDLE' })
               }}
             />}
 
-            {/* Level 2 Stop-Loss (-1%) Threshold Line */}
+            {/* Level 2 Stop-Loss Threshold Line */}
             {slPnl !== null && <ReferenceLine
-              y={viewMode === 'percent' ? -1.0 : slPnl}
+              y={viewMode === 'percent' ? -slPctNum : slPnl}
               stroke="#EF4444"
               strokeDasharray="5 3"
               strokeWidth={1.5}
               label={{
-                value: viewMode === 'percent' ? 'SL (-1.0%)' : `SL (-1%): -$${Math.abs(slPnl).toFixed(2)}`,
+                value: viewMode === 'percent' ? `SL (-${slPctDisplay})` : `SL (-${slPctDisplay}): -$${Math.abs(slPnl).toFixed(2)}`,
                 fill: '#EF4444',
                 fontSize: 10,
                 position: 'right',
@@ -352,10 +357,10 @@ export default function MainPnlChart({ risk, currentPnl = 0.0, state = 'IDLE' })
             <span className="w-2.5 h-0.5 bg-[#20C978] inline-block" /> Live Trajectory
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-0.5 bg-[#20C978] border-dashed border-t inline-block" /> Take-Profit (+2%)
+            <span className="w-2.5 h-0.5 bg-[#20C978] border-dashed border-t inline-block" /> Take-Profit (+{tpPctDisplay})
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-0.5 bg-[#EF4444] border-dashed border-t inline-block" /> Stop-Loss (-1%)
+            <span className="w-2.5 h-0.5 bg-[#EF4444] border-dashed border-t inline-block" /> Stop-Loss (-{slPctDisplay})
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-0.5 bg-gray-500 border-dashed border-t inline-block" /> Breakeven ($0)
