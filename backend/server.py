@@ -5,11 +5,28 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import signal
 import threading
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
+
+# Monkeypatch signal.signal so that NautilusKernel's signal registration on worker threads
+# does not trigger "ValueError: signal only works in main thread of the main interpreter" on Linux.
+_orig_signal = signal.signal
+
+
+def _safe_signal(sig, handler):
+    if threading.current_thread() is not threading.main_thread():
+        return None
+    try:
+        return _orig_signal(sig, handler)
+    except ValueError:
+        return None
+
+
+signal.signal = _safe_signal
 
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
