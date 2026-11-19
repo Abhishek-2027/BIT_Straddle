@@ -28,6 +28,24 @@ def _safe_signal(sig, handler):
 
 signal.signal = _safe_signal
 
+# Monkeypatch NautilusKernel._setup_loop so uvloop's Loop.add_signal_handler()
+# does not raise "ValueError: add_signal_handler() can only be called from the main thread"
+# when TradingNode is run inside a background thread.
+try:
+    from nautilus_trader.system.kernel import NautilusKernel
+
+    _orig_setup_loop = NautilusKernel._setup_loop
+
+    def _safe_setup_loop(self) -> None:
+        try:
+            _orig_setup_loop(self)
+        except Exception:
+            pass
+
+    NautilusKernel._setup_loop = _safe_setup_loop
+except Exception:
+    pass
+
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
