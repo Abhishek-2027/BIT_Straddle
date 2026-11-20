@@ -123,10 +123,14 @@ def build_trading_node():
         return None
 
     # Bybit Data Client Configuration
+    # Note: Bybit Demo public option market data uses the Mainnet public stream (stream.bybit.com)
+    # because Bybit does not host a separate stream-demo public WebSocket endpoint.
+    # HTTP requests point to api-demo.bybit.com for Demo so Demo credentials authenticate cleanly.
     data_client_config = BybitDataClientConfig(
         api_key=api_key,
         api_secret=api_secret,
-        demo=is_demo,
+        base_url_http="https://api-demo.bybit.com" if is_demo else None,
+        demo=False,
         testnet=is_testnet,
         product_types=[BybitProductType.OPTION],
         instrument_provider=InstrumentProviderConfig(load_all=True),

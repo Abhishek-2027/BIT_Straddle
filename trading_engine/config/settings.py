@@ -24,6 +24,8 @@ class TradingEngineSettings(BaseSettings):
     # Bybit Credentials
     BYBIT_API_KEY: str = ""
     BYBIT_API_SECRET: str = ""
+    BYBIT_DEMO_API_KEY: str = ""
+    BYBIT_DEMO_API_SECRET: str = ""
     BYBIT_TESTNET_API_KEY: str = ""
     BYBIT_TESTNET_API_SECRET: str = ""
     BYBIT_TESTNET: bool = True
@@ -62,25 +64,39 @@ class TradingEngineSettings(BaseSettings):
     def resolve_aliases(cls, data: dict):
         # Resolve Bybit API Key
         key = (
-            os.environ.get("BYBIT_TESTNET_API_KEY")
-            or os.environ.get("BYBIT_API_KEY")
-            or data.get("BYBIT_TESTNET_API_KEY")
+            os.environ.get("BYBIT_API_KEY")
+            or os.environ.get("BYBIT_DEMO_API_KEY")
+            or os.environ.get("BYBIT_TESTNET_API_KEY")
             or data.get("BYBIT_API_KEY")
+            or data.get("BYBIT_DEMO_API_KEY")
+            or data.get("BYBIT_TESTNET_API_KEY")
             or ""
         )
-        data["BYBIT_TESTNET_API_KEY"] = key
         data["BYBIT_API_KEY"] = key
+        data["BYBIT_DEMO_API_KEY"] = key
+        data["BYBIT_TESTNET_API_KEY"] = key
+        if key:
+            os.environ["BYBIT_API_KEY"] = key
+            os.environ["BYBIT_DEMO_API_KEY"] = key
+            os.environ["BYBIT_TESTNET_API_KEY"] = key
 
         # Resolve Bybit Secret
         secret = (
-            os.environ.get("BYBIT_TESTNET_API_SECRET")
-            or os.environ.get("BYBIT_API_SECRET")
-            or data.get("BYBIT_TESTNET_API_SECRET")
+            os.environ.get("BYBIT_API_SECRET")
+            or os.environ.get("BYBIT_DEMO_API_SECRET")
+            or os.environ.get("BYBIT_TESTNET_API_SECRET")
             or data.get("BYBIT_API_SECRET")
+            or data.get("BYBIT_DEMO_API_SECRET")
+            or data.get("BYBIT_TESTNET_API_SECRET")
             or ""
         )
-        data["BYBIT_TESTNET_API_SECRET"] = secret
         data["BYBIT_API_SECRET"] = secret
+        data["BYBIT_DEMO_API_SECRET"] = secret
+        data["BYBIT_TESTNET_API_SECRET"] = secret
+        if secret:
+            os.environ["BYBIT_API_SECRET"] = secret
+            os.environ["BYBIT_DEMO_API_SECRET"] = secret
+            os.environ["BYBIT_TESTNET_API_SECRET"] = secret
 
         # Resolve Quantity
         if "STRATEGY_QUANTITY" in os.environ:

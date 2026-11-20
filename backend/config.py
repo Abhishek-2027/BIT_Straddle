@@ -16,6 +16,28 @@ for p in (_BACKEND_DIR / ".env", _ROOT_DIR / ".env"):
     if p.exists():
         load_dotenv(p)
 
+# Immediately propagate Bybit key/secret aliases into os.environ
+_init_key = (
+    os.environ.get("BYBIT_API_KEY")
+    or os.environ.get("BYBIT_DEMO_API_KEY")
+    or os.environ.get("BYBIT_TESTNET_API_KEY")
+    or ""
+)
+_init_secret = (
+    os.environ.get("BYBIT_API_SECRET")
+    or os.environ.get("BYBIT_DEMO_API_SECRET")
+    or os.environ.get("BYBIT_TESTNET_API_SECRET")
+    or ""
+)
+if _init_key:
+    os.environ.setdefault("BYBIT_API_KEY", _init_key)
+    os.environ.setdefault("BYBIT_DEMO_API_KEY", _init_key)
+    os.environ.setdefault("BYBIT_TESTNET_API_KEY", _init_key)
+if _init_secret:
+    os.environ.setdefault("BYBIT_API_SECRET", _init_secret)
+    os.environ.setdefault("BYBIT_DEMO_API_SECRET", _init_secret)
+    os.environ.setdefault("BYBIT_TESTNET_API_SECRET", _init_secret)
+
 
 class Settings(BaseSettings):
     """All configuration knobs for the BTC straddle system."""
@@ -23,6 +45,8 @@ class Settings(BaseSettings):
     # Bybit credentials
     BYBIT_API_KEY: str = ""
     BYBIT_API_SECRET: str = ""
+    BYBIT_DEMO_API_KEY: str = ""
+    BYBIT_DEMO_API_SECRET: str = ""
     BYBIT_TESTNET_API_KEY: str = ""
     BYBIT_TESTNET_API_SECRET: str = ""
     BYBIT_TESTNET: bool = False
@@ -90,10 +114,18 @@ class Settings(BaseSettings):
         )
         if resolved_key:
             data["BYBIT_API_KEY"] = resolved_key
+            data["BYBIT_DEMO_API_KEY"] = resolved_key
             data["BYBIT_TESTNET_API_KEY"] = resolved_key
+            os.environ["BYBIT_API_KEY"] = resolved_key
+            os.environ["BYBIT_DEMO_API_KEY"] = resolved_key
+            os.environ["BYBIT_TESTNET_API_KEY"] = resolved_key
         if resolved_secret:
             data["BYBIT_API_SECRET"] = resolved_secret
+            data["BYBIT_DEMO_API_SECRET"] = resolved_secret
             data["BYBIT_TESTNET_API_SECRET"] = resolved_secret
+            os.environ["BYBIT_API_SECRET"] = resolved_secret
+            os.environ["BYBIT_DEMO_API_SECRET"] = resolved_secret
+            os.environ["BYBIT_TESTNET_API_SECRET"] = resolved_secret
 
         # Allow STOP_LOSS as alias for SL_PCT
         if "STOP_LOSS" in os.environ:
