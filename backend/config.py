@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     """All configuration knobs for the BTC straddle system."""
 
     # Bybit credentials
+    BYBIT_API_KEY: str = ""
+    BYBIT_API_SECRET: str = ""
     BYBIT_TESTNET_API_KEY: str = ""
     BYBIT_TESTNET_API_SECRET: str = ""
     BYBIT_TESTNET: bool = False
@@ -67,15 +69,31 @@ class Settings(BaseSettings):
     @classmethod
     def handle_aliases(cls, data: dict):
         data = dict(data or {})
-        # Prefer populated legacy names only when the environment-specific value is empty.
-        for alias, canonical in (
-            ("BYBIT_API_KEY", "BYBIT_TESTNET_API_KEY"),
-            ("BYBIT_API_SECRET", "BYBIT_TESTNET_API_SECRET"),
-        ):
-            alias_value = os.environ.get(alias) or data.get(alias)
-            canonical_value = os.environ.get(canonical) or data.get(canonical)
-            if alias_value and not canonical_value:
-                data[canonical] = alias_value
+        # Synchronize Bybit API keys across aliases (BYBIT_API_KEY, BYBIT_TESTNET_API_KEY, BYBIT_DEMO_API_KEY)
+        resolved_key = (
+            os.environ.get("BYBIT_API_KEY")
+            or data.get("BYBIT_API_KEY")
+            or os.environ.get("BYBIT_DEMO_API_KEY")
+            or data.get("BYBIT_DEMO_API_KEY")
+            or os.environ.get("BYBIT_TESTNET_API_KEY")
+            or data.get("BYBIT_TESTNET_API_KEY")
+            or ""
+        )
+        resolved_secret = (
+            os.environ.get("BYBIT_API_SECRET")
+            or data.get("BYBIT_API_SECRET")
+            or os.environ.get("BYBIT_DEMO_API_SECRET")
+            or data.get("BYBIT_DEMO_API_SECRET")
+            or os.environ.get("BYBIT_TESTNET_API_SECRET")
+            or data.get("BYBIT_TESTNET_API_SECRET")
+            or ""
+        )
+        if resolved_key:
+            data["BYBIT_API_KEY"] = resolved_key
+            data["BYBIT_TESTNET_API_KEY"] = resolved_key
+        if resolved_secret:
+            data["BYBIT_API_SECRET"] = resolved_secret
+            data["BYBIT_TESTNET_API_SECRET"] = resolved_secret
 
         # Allow STOP_LOSS as alias for SL_PCT
         if "STOP_LOSS" in os.environ:

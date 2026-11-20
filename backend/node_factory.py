@@ -115,16 +115,18 @@ def build_trading_node():
     else:
         logger.warning("Configured for Bybit MAINNET! Live trading with real funds will occur if armed.")
 
-    if not settings.BYBIT_TESTNET_API_KEY or not settings.BYBIT_TESTNET_API_SECRET:
+    api_key = settings.BYBIT_API_KEY or settings.BYBIT_TESTNET_API_KEY
+    api_secret = settings.BYBIT_API_SECRET or settings.BYBIT_TESTNET_API_SECRET
+
+    if not api_key or not api_secret:
         logger.error("Bybit %s credentials are not configured; trading node will not start", settings.BYBIT_ENVIRONMENT)
         return None
 
-    # Demo public market data comes from the regular public stream, while
-    # authenticated execution uses the isolated Demo API and private stream.
+    # Bybit Data Client Configuration
     data_client_config = BybitDataClientConfig(
-        api_key=None if is_demo else settings.BYBIT_TESTNET_API_KEY,
-        api_secret=None if is_demo else settings.BYBIT_TESTNET_API_SECRET,
-        demo=False,
+        api_key=api_key,
+        api_secret=api_secret,
+        demo=is_demo,
         testnet=is_testnet,
         product_types=[BybitProductType.OPTION],
         instrument_provider=InstrumentProviderConfig(load_all=True),
@@ -132,8 +134,8 @@ def build_trading_node():
 
     # Bybit Exec Client Configuration
     exec_client_config = BybitExecClientConfig(
-        api_key=settings.BYBIT_TESTNET_API_KEY,
-        api_secret=settings.BYBIT_TESTNET_API_SECRET,
+        api_key=api_key,
+        api_secret=api_secret,
         demo=is_demo,
         testnet=is_testnet,
         base_url_ws_private=(

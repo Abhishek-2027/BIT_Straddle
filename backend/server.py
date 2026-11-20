@@ -329,11 +329,13 @@ async def reset_strategy() -> dict[str, Any]:
     try:
         import uuid
         import pybit.unified_trading as bybit
-        if settings.BYBIT_TESTNET_API_KEY and settings.BYBIT_TESTNET_API_SECRET:
+        api_key = settings.BYBIT_API_KEY or settings.BYBIT_TESTNET_API_KEY
+        api_secret = settings.BYBIT_API_SECRET or settings.BYBIT_TESTNET_API_SECRET
+        if api_key and api_secret:
             session = bybit.HTTP(
                 testnet=False,
-                api_key=settings.BYBIT_TESTNET_API_KEY,
-                api_secret=settings.BYBIT_TESTNET_API_SECRET,
+                api_key=api_key,
+                api_secret=api_secret,
                 demo=True,
             )
             res = session.get_positions(category="option", baseCoin="BTC")
